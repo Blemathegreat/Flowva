@@ -2,7 +2,7 @@ import { Users, Calendar } from 'lucide-react';
 
 const TopToolSpotlight = ({ onOpenClaimModal }) => {
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <div className="bg-white rounded-lg shadow overflow-hidden transition-transform transform hover:-translate-y-1 hover:scale-[1.01] hover:shadow-lg">
       <div className="bg-gradient-to-br from-purple-600 to-blue-400 p-6">
         <span className="inline-block bg-white/20 text-white text-xs font-semibold px-3 py-1 rounded-full mb-4">Featured</span>
         <div className="flex items-center justify-between">

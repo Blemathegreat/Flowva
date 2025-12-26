@@ -2,7 +2,7 @@ import { Award } from 'lucide-react';
 
 const PointsBalanceCard = ({ pointsBalance, pointsGoal, progressPercentage }) => {
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-lg shadow transition-transform transform hover:-translate-y-1 hover:scale-[1.01] hover:shadow-lg">
       <div className='bg-gray-100 p-6'>
         <div className="flex items-center gap-3 mb-4">
           <Award className="w-6 h-6 text-purple-600" />

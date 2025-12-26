@@ -2,7 +2,7 @@ import { Users, Copy } from 'lucide-react';
 
 const ReferEarnSection = ({ referralStats, referralLink, copyToClipboard, copied, shareOnSocial }) => {
   return (
-    <div className="rounded-lg border border-gray-200 overflow-hidden">
+    <div className="rounded-lg border border-gray-200 overflow-hidden transition-transform transform hover:-translate-y-1 hover:scale-[1.01] hover:shadow-lg">
       <div className="bg-purple-300 p-6">
         <div className="flex items-center gap-3">
           <Users className="w-6 h-6 text-purple-600" />

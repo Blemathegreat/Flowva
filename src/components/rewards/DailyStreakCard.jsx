@@ -2,7 +2,7 @@ import { Calendar, Zap } from 'lucide-react';
 
 const DailyStreakCard = ({ dailyStreak, weekDays, weeklyCheckIns, handleClaimPoints, claiming }) => {
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white rounded-lg shadow transition-transform transform hover:-translate-y-1 hover:scale-[1.01] hover:shadow-lg">
       <div className='p-6 bg-gray-100 rounded-t-lg'>
         <div className="flex items-center gap-3 mb-4">
           <Calendar className="w-6 h-6 text-blue-500" />

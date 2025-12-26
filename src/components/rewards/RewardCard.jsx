@@ -15,7 +15,7 @@ const RewardCard = ({ reward }) => {
   const Icon = iconMap[reward.icon_name] || Gift;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col items-center text-center hover:shadow-md transition-shadow">
+    <div className="bg-white rounded-lg border border-gray-200 p-6 flex flex-col items-center text-center transition-transform transform hover:-translate-y-1 hover:scale-[1.01] hover:shadow-lg">
       {/* Icon */}
       <div className={`w-16 h-16 ${reward.icon_bg_color} rounded-2xl flex items-center justify-center mb-4`}>
         <Icon className="w-8 h-8 text-gray-700" />
