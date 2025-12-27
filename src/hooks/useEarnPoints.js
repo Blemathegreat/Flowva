@@ -19,42 +19,62 @@ export const useEarnPoints = (userId) => {
     try {
       setLoading(true);
       
-      // FIXED: Remove .single() and handle result manually
+      // Use maybeSingle so we get either an object or null (handles race conditions)
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId);
+        .eq('id', userId)
+        .maybeSingle();
 
       if (error) throw error;
 
-      // Check if we got a result
-      if (!data || data.length === 0) {
-        // User doesn't exist - create them automatically
+      // If user doesn't exist, try to create (or upsert) them
+      if (!data) {
         const { data: authUser } = await supabase.auth.getUser();
-        
+
         if (authUser?.user) {
           const referralCode = `user${Math.floor(Math.random() * 10000)}`;
-          
-          const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: userId,
-              email: authUser.user.email,
-              full_name: authUser.user.user_metadata?.full_name || 'User',
-              referral_code: referralCode,
-              points_balance: 0,
-              daily_streak: 0
-            })
-            .select();
 
-          if (insertError) throw insertError;
-          setUserData(newUser[0]); // Get first item from array
+          // Use upsert with onConflict to avoid duplicate primary-key errors
+          const { data: newUser, error: upsertError } = await supabase
+            .from('users')
+            .upsert(
+              {
+                id: userId,
+                email: authUser.user.email,
+                full_name: authUser.user.user_metadata?.full_name || 'User',
+                referral_code: referralCode,
+                points_balance: 0,
+                daily_streak: 0
+              },
+              { onConflict: 'id' }
+            )
+            .select()
+            .maybeSingle();
+
+          if (upsertError) {
+            // If upsert failed due to a duplicate key race, fetch existing record
+            const dupMsg = String(upsertError.message || upsertError.details || '').toLowerCase();
+            if (dupMsg.includes('duplicate') || upsertError?.code === '23505') {
+              const { data: existing, error: fetchErr } = await supabase
+                .from('users')
+                .select('*')
+                .eq('id', userId)
+                .maybeSingle();
+              if (fetchErr) throw fetchErr;
+              setUserData(existing);
+            } else {
+              throw upsertError;
+            }
+          } else {
+            setUserData(newUser);
+          }
         } else {
           throw new Error('User not found');
         }
       } else {
-        // User exists, use the first result
-        setUserData(data[0]);
+        // User exists, use the returned object
+        setUserData(data);
       }
       
       setError(null);
