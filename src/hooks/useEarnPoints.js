@@ -10,20 +10,54 @@ export const useEarnPoints = (userId) => {
   useEffect(() => {
     if (userId) {
       fetchUserData();
+    } else {
+      setLoading(false);
     }
   }, [userId]);
 
   const fetchUserData = async () => {
     try {
       setLoading(true);
+      
+      // FIXED: Remove .single() and handle result manually
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
-        .single();
+        .eq('id', userId);
 
       if (error) throw error;
-      setUserData(data);
+
+      // Check if we got a result
+      if (!data || data.length === 0) {
+        // User doesn't exist - create them automatically
+        const { data: authUser } = await supabase.auth.getUser();
+        
+        if (authUser?.user) {
+          const referralCode = `user${Math.floor(Math.random() * 10000)}`;
+          
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: userId,
+              email: authUser.user.email,
+              full_name: authUser.user.user_metadata?.full_name || 'User',
+              referral_code: referralCode,
+              points_balance: 0,
+              daily_streak: 0
+            })
+            .select();
+
+          if (insertError) throw insertError;
+          setUserData(newUser[0]); // Get first item from array
+        } else {
+          throw new Error('User not found');
+        }
+      } else {
+        // User exists, use the first result
+        setUserData(data[0]);
+      }
+      
+      setError(null);
     } catch (error) {
       setError(error.message);
       console.error('Error fetching user data:', error);
@@ -33,11 +67,14 @@ export const useEarnPoints = (userId) => {
   };
 
   const claimDailyPoints = async () => {
+    if (!userId || !userData) {
+      return { success: false, message: 'User not found' };
+    }
+
     try {
       const today = new Date().toISOString().split('T')[0];
       const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-      // Check if already claimed today - using select('*') to avoid cache issues
       const { data: checkIns, error: fetchError } = await supabase
         .from('daily_checkins')
         .select('*')
@@ -48,19 +85,15 @@ export const useEarnPoints = (userId) => {
         throw fetchError;
       }
 
-      // Check if today exists in the results
       const existingCheckIn = checkIns?.find(c => c.check_in_date === today);
 
       if (existingCheckIn) {
         throw new Error('Already claimed today!');
       }
 
-      // Check if checked in yesterday (for streak)
       const yesterdayCheckIn = checkIns?.find(c => c.check_in_date === yesterday);
-
       const newStreak = yesterdayCheckIn ? (userData.daily_streak || 0) + 1 : 1;
 
-      // Insert check-in record
       const { error: checkInError } = await supabase
         .from('daily_checkins')
         .insert({
@@ -74,7 +107,6 @@ export const useEarnPoints = (userId) => {
         throw checkInError;
       }
 
-      // Update user points and streak
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -89,7 +121,6 @@ export const useEarnPoints = (userId) => {
         throw updateError;
       }
 
-      // Refresh user data
       await fetchUserData();
       return { success: true, message: 'Daily points claimed! +5 points' };
     } catch (error) {
@@ -99,12 +130,13 @@ export const useEarnPoints = (userId) => {
   };
 
   const getWeeklyCheckIns = async () => {
+    if (!userId) return Array(7).fill(false);
+
     try {
       const today = new Date();
       const weekStart = new Date(today);
       weekStart.setDate(today.getDate() - today.getDay());
 
-      // Fetch all check-ins for the user (using select('*') to avoid cache issues)
       const { data, error } = await supabase
         .from('daily_checkins')
         .select('*')
@@ -115,18 +147,16 @@ export const useEarnPoints = (userId) => {
         throw error;
       }
 
-      // Filter the results in JavaScript instead of in the query
       const weekEnd = new Date(today);
       const filteredData = (data || []).filter(d => {
         const checkDate = new Date(d.check_in_date);
         return checkDate >= weekStart && checkDate <= weekEnd;
       });
 
-      // Create array of completed days (true/false for each day of week)
       const completedDates = filteredData.map(d => d.check_in_date);
       const weekDays = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(weekStart);
-        date.setDate(weekStart.getDate() + i);
+        date.setDate(weekStart.getStart() + i);
         return completedDates.includes(date.toISOString().split('T')[0]);
       });
 
@@ -138,6 +168,8 @@ export const useEarnPoints = (userId) => {
   };
 
   const getReferralStats = async () => {
+    if (!userId) return { referrals: 0, pointsEarned: 0 };
+
     try {
       const { data, error } = await supabase
         .from('referrals')
