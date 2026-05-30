@@ -176,7 +176,7 @@ export const useEarnPoints = (userId) => {
       const completedDates = filteredData.map(d => d.check_in_date);
       const weekDays = Array.from({ length: 7 }, (_, i) => {
         const date = new Date(weekStart);
-        date.setDate(weekStart.getStart() + i);
+        date.setDate(weekStart.getDate() + i);
         return completedDates.includes(date.toISOString().split('T')[0]);
       });
 
